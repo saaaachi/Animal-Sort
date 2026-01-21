@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Animal Sort Speed</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #f0f0f0; font-family: 'Hiragino Kaku Gothic ProN', sans-serif; }
+        
+        /* 広告エリア：上下110px */
+        #ad-top { position: fixed; top: 0; left: 0; width: 100%; height: 110px; background: #333; z-index: 100; display: flex; align-items: center; justify-content: center; }
+        #ad-bottom { position: fixed; bottom: 0; left: 0; width: 100%; height: 110px; background: #333; z-index: 100; display: flex; align-items: center; justify-content: center; }
+        
+        #game-area { 
+            margin-top: 110px; 
+            height: calc(100vh - 220px); 
+            display: flex; flex-direction: column; align-items: center; justify-content: space-around;
+            position: relative;
+        }
+
+        #score-ui { font-size: 24px; font-weight: bold; color: #333; }
+        
+        /* 中央のターゲット */
+        #target-card {
+            width: 150px; height: 150px; background: white; border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 80px; box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            user-select: none;
+        }
+
+        /* 左右の指示 */
+        .guide { position: absolute; top: 50%; transform: translateY(-50%); font-size: 40px; font-weight: bold; opacity: 0.3; }
+        #left-guide { left: 20px; color: #ff6b6b; }
+        #right-guide { right: 20px; color: #4ecdc4; }
+
+        #startScreen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50;
+        }
+        #goButton { padding: 15px 40px; font-size: 24px; background: #333; border: none; border-radius: 50px; color: white; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div id="ad-top"><div id="ad-box-1">★</div></div>
+    <div id="ad-bottom"><div id="ad-box-2">★</div></div>
+
+    <div id="game-area">
+        <div id="score-ui">SCORE: 0</div>
+        
+        <div id="left-guide">🐶</div>
+        <div id="target-card">？</div>
+        <div id="right-guide">🐱</div>
+
+        <div id="startScreen">
+            <h1 style="color:#333;">ANIMAL SORT</h1>
+            <p>イヌは左！ネコは右！</p>
+            <button id="goButton">START</button>
+            <p>BEST: <span id="best-ui">0</span></p>
+        </div>
+    </div>
+
+    <script>
+        const targetCard = document.getElementById("target-card");
+        const scoreUi = document.getElementById("score-ui");
+        const startScreen = document.getElementById("startScreen");
+        const bestUi = document.getElementById("best-ui");
+
+        let score = 0;
+        let bestScore = localStorage.getItem("animal_sort_best") || 0;
+        let currentType = ""; // "dog" or "cat"
+        let gameActive = false;
+        let timeLeft = 10;
+        let timer;
+
+        bestUi.innerText = bestScore;
+
+        document.getElementById("goButton").onclick = () => {
+            startScreen.style.display = "none";
+            gameActive = true;
+            score = 0;
+            timeLeft = 10;
+            scoreUi.innerText = "TIME: 10.0";
+            nextAnimal();
+            startTimer();
+        };
+
+        function nextAnimal() {
+            currentType = Math.random() > 0.5 ? "dog" : "cat";
+            targetCard.innerText = currentType === "dog" ? "🐶" : "🐱";
+        }
+
+        // 左右クリック（タップ）で仕分け
+        window.addEventListener("mousedown", (e) => {
+            if(!gameActive) return;
+            const screenWidth = window.innerWidth;
+            const choice = e.clientX < screenWidth / 2 ? "dog" : "cat";
+            checkAnswer(choice);
+        });
+
+        function checkAnswer(choice) {
+            if(choice === currentType) {
+                score++;
+                timeLeft += 0.3; // 正解で少し時間回復
+                nextAnimal();
+            } else {
+                timeLeft -= 1.0; // ミスで時間減少
+                targetCard.style.background = "#ffcfcf";
+                setTimeout(() => targetCard.style.background = "white", 100);
+            }
+        }
+
+        function startTimer() {
+            timer = setInterval(() => {
+                timeLeft -= 0.1;
+                scoreUi.innerText = `TIME: ${Math.max(0, timeLeft).toFixed(1)} | SCORE: ${score}`;
+                if(timeLeft <= 0) {
+                    gameOver();
+                }
+            }, 100);
+        }
+
+        function gameOver() {
+            gameActive = false;
+            clearInterval(timer);
+            if(score > bestScore) {
+                bestScore = score;
+                localStorage.setItem("animal_sort_best", bestScore);
+            }
+            alert(`TIME UP!\nSCORE: ${score}`);
+            location.reload();
+        }
+
+        // 20.1秒リフレッシュ
+        setInterval(() => {
+            ["ad-box-1", "ad-box-2"].forEach(id => {
+                const box = document.getElementById(id);
+                if (box && box.innerHTML.trim() !== "★") {
+                    const tag = box.innerHTML;
+                    box.innerHTML = "";
+                    setTimeout(() => { box.innerHTML = tag; }, 100);
+                }
+            });
+        }, 20100);
+    </script>
+</body>
+</html>
