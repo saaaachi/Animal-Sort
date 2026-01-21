@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Animal Sort Speed</title>
+    <title>Animal Sort Flick</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #f0f0f0; font-family: 'Hiragino Kaku Gothic ProN', sans-serif; }
+        body { margin: 0; overflow: hidden; background: #f0f0f0; font-family: sans-serif; touch-action: none; }
         
         /* 広告エリア：上下110px */
         #ad-top { position: fixed; top: 0; left: 0; width: 100%; height: 110px; background: #333; z-index: 100; display: flex; align-items: center; justify-content: center; }
@@ -15,23 +15,22 @@
             margin-top: 110px; 
             height: calc(100vh - 220px); 
             display: flex; flex-direction: column; align-items: center; justify-content: space-around;
-            position: relative;
+            position: relative; overflow: hidden;
         }
 
-        #score-ui { font-size: 24px; font-weight: bold; color: #333; }
+        #score-ui { font-size: 24px; font-weight: bold; color: #333; z-index: 10; }
         
         /* 中央のターゲット */
         #target-card {
-            width: 150px; height: 150px; background: white; border-radius: 20px;
+            width: 140px; height: 140px; background: white; border-radius: 20px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 80px; box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-            user-select: none;
+            font-size: 70px; box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            user-select: none; transition: transform 0.1s;
         }
 
-        /* 左右の指示 */
-        .guide { position: absolute; top: 50%; transform: translateY(-50%); font-size: 40px; font-weight: bold; opacity: 0.3; }
-        #left-guide { left: 20px; color: #ff6b6b; }
-        #right-guide { right: 20px; color: #4ecdc4; }
+        .guide { position: absolute; top: 50%; transform: translateY(-50%); font-size: 40px; font-weight: bold; opacity: 0.2; pointer-events: none; }
+        #left-guide { left: 10px; color: #ff6b6b; }
+        #right-guide { right: 10px; color: #4ecdc4; }
 
         #startScreen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -50,15 +49,15 @@
 <!-- admax --></div></div>
 
     <div id="game-area">
-        <div id="score-ui">SCORE: 0</div>
+        <div id="score-ui">TIME: 10.0 | SCORE: 0</div>
         
-        <div id="left-guide">🐶</div>
+        <div id="left-guide" class="guide">🐶 左</div>
         <div id="target-card">？</div>
-        <div id="right-guide">🐱</div>
+        <div id="right-guide" class="guide">ネコ 右 🐱</div>
 
         <div id="startScreen">
             <h1 style="color:#333;">ANIMAL SORT</h1>
-            <p>イヌは左！ネコは右！</p>
+            <p>🐶は左へ！🐱は右へ！<br>素早くフリックしてね！</p>
             <button id="goButton">START</button>
             <p>BEST: <span id="best-ui">0</span></p>
         </div>
@@ -72,10 +71,13 @@
 
         let score = 0;
         let bestScore = localStorage.getItem("animal_sort_best") || 0;
-        let currentType = ""; // "dog" or "cat"
+        let currentType = ""; 
         let gameActive = false;
         let timeLeft = 10;
         let timer;
+        
+        // フリック判定用
+        let startX = 0;
 
         bestUi.innerText = bestScore;
 
@@ -84,7 +86,6 @@
             gameActive = true;
             score = 0;
             timeLeft = 10;
-            scoreUi.innerText = "TIME: 10.0";
             nextAnimal();
             startTimer();
         };
@@ -92,29 +93,49 @@
         function nextAnimal() {
             currentType = Math.random() > 0.5 ? "dog" : "cat";
             targetCard.innerText = currentType === "dog" ? "🐶" : "🐱";
+            targetCard.style.transform = "translateX(0) scale(1)";
         }
 
-        // 左右クリック（タップ）で仕分け
-        window.addEventListener("mousedown", (e) => {
+        // タッチ開始
+        window.addEventListener("touchstart", (e) => {
             if(!gameActive) return;
-            const screenWidth = window.innerWidth;
-            const choice = e.clientX < screenWidth / 2 ? "dog" : "cat";
-            checkAnswer(choice);
+            startX = e.touches[0].clientX;
+        });
+
+        // タッチ終了（ここでフリック方向を判定）
+        window.addEventListener("touchend", (e) => {
+            if(!gameActive) return;
+            let endX = e.changedTouches[0].clientX;
+            let diffX = endX - startX;
+
+            if (Math.abs(diffX) > 30) { // 30ピクセル以上動いたらフリックとみなす
+                const choice = diffX < 0 ? "dog" : "cat";
+                
+                // アニメーション演出
+                targetCard.style.transform = `translateX(${diffX > 0 ? 200 : -200}px) rotate(${diffX > 0 ? 20 : -20}deg)`;
+                
+                setTimeout(() => {
+                    checkAnswer(choice);
+                }, 100);
+            }
         });
 
         function checkAnswer(choice) {
             if(choice === currentType) {
                 score++;
-                timeLeft += 0.3; // 正解で少し時間回復
+                timeLeft += 0.4;
                 nextAnimal();
             } else {
-                timeLeft -= 1.0; // ミスで時間減少
-                targetCard.style.background = "#ffcfcf";
-                setTimeout(() => targetCard.style.background = "white", 100);
+                timeLeft -= 1.2;
+                nextAnimal();
+                // ミス演出
+                document.body.style.background = "#ffcfcf";
+                setTimeout(() => document.body.style.background = "#f0f0f0", 100);
             }
         }
 
         function startTimer() {
+            if(timer) clearInterval(timer);
             timer = setInterval(() => {
                 timeLeft -= 0.1;
                 scoreUi.innerText = `TIME: ${Math.max(0, timeLeft).toFixed(1)} | SCORE: ${score}`;
