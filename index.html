@@ -3,63 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Animal Sort Flick</title>
+    <title>Animal Sort Flick v2</title>
     <style>
         body { margin: 0; overflow: hidden; background: #f0f0f0; font-family: sans-serif; touch-action: none; }
         
-        /* 広告エリア：上下110px */
-        #ad-top { position: fixed; top: 0; left: 0; width: 100%; height: 110px; background: #333; z-index: 100; display: flex; align-items: center; justify-content: center; }
-        #ad-bottom { position: fixed; bottom: 0; left: 0; width: 100%; height: 110px; background: #333; z-index: 100; display: flex; align-items: center; justify-content: center; }
+        /* 広告エリア：高さを150pxに設定（中サイズ対応） */
+        #ad-top, #ad-bottom { 
+            position: fixed; left: 0; width: 100%; height: 150px; 
+            background: #333; z-index: 100; display: flex; align-items: center; justify-content: center; 
+        }
+        #ad-top { top: 0; }
+        #ad-bottom { bottom: 0; }
         
+        iframe { border: none; width: 100%; height: 150px; }
+
+        /* ゲームエリア：上下150pxを避けて配置 */
         #game-area { 
-            margin-top: 110px; 
-            height: calc(100vh - 220px); 
+            margin-top: 150px; 
+            height: calc(100vh - 300px); 
             display: flex; flex-direction: column; align-items: center; justify-content: space-around;
             position: relative; overflow: hidden;
         }
 
-        #score-ui { font-size: 24px; font-weight: bold; color: #333; z-index: 10; }
+        #score-ui { font-size: 24px; font-weight: bold; color: #333; z-index: 10; text-shadow: 1px 1px 2px white; }
         
         /* 中央のターゲット */
         #target-card {
             width: 140px; height: 140px; background: white; border-radius: 20px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 70px; box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-            user-select: none; transition: transform 0.1s;
+            font-size: 75px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            user-select: none; transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 20;
         }
 
-        .guide { position: absolute; top: 50%; transform: translateY(-50%); font-size: 40px; font-weight: bold; opacity: 0.2; pointer-events: none; }
-        #left-guide { left: 10px; color: #ff6b6b; }
-        #right-guide { right: 10px; color: #4ecdc4; }
+        .guide { position: absolute; top: 50%; transform: translateY(-50%); font-size: 36px; font-weight: bold; opacity: 0.25; pointer-events: none; }
+        #left-guide { left: 15px; color: #ff6b6b; }
+        #right-guide { right: 15px; color: #4ecdc4; }
 
         #startScreen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50;
+            background: rgba(255,255,255,0.96); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50;
         }
-        #goButton { padding: 15px 40px; font-size: 24px; background: #333; border: none; border-radius: 50px; color: white; font-weight: bold; cursor: pointer; }
+        #goButton { padding: 15px 45px; font-size: 24px; background: #333; border: none; border-radius: 50px; color: white; font-weight: bold; cursor: pointer; box-shadow: 0 4px #000; }
+        #best-info { margin-top: 15px; font-weight: bold; color: #555; }
     </style>
 </head>
 <body>
 
-    <div id="ad-top"><div id="ad-box-1"><!-- admax -->
-<script src="https://adm.shinobi.jp/s/f2a71e17cea098a5c4b063f3384132d3"></script>
-<!-- admax --></div></div>
-    <div id="ad-bottom"><div id="ad-box-2"><!-- admax -->
-<script src="https://adm.shinobi.jp/s/f2a71e17cea098a5c4b063f3384132d3"></script>
-<!-- admax --></div></div>
+    <div id="ad-top"><iframe id="frame-top" src="ad.html"></iframe></div>
+    <div id="ad-bottom"><iframe id="frame-bottom" src="ad.html"></iframe></div>
 
     <div id="game-area">
         <div id="score-ui">TIME: 10.0 | SCORE: 0</div>
         
-        <div id="left-guide" class="guide">🐶 左</div>
+        <div id="left-guide" class="guide">🐶<br>左</div>
         <div id="target-card">？</div>
-        <div id="right-guide" class="guide">ネコ 右 🐱</div>
+        <div id="right-guide" class="guide">右<br>🐱</div>
 
         <div id="startScreen">
-            <h1 style="color:#333;">ANIMAL SORT</h1>
-            <p>🐶は左へ！🐱は右へ！<br>素早くフリックしてね！</p>
-            <button id="goButton">START</button>
-            <p>BEST: <span id="best-ui">0</span></p>
+            <h1 style="color:#333; margin-bottom: 10px;">ANIMAL SORT</h1>
+            <p style="text-align: center; line-height: 1.6; margin-bottom: 20px;">🐶は左へ！🐱は右へ！<br>爆速でフリックしてね！</p>
+            <button id="goButton">GAME START</button>
+            <div id="best-info">BEST SCORE: <span id="best-ui">0</span></div>
         </div>
     </div>
 
@@ -75,8 +80,6 @@
         let gameActive = false;
         let timeLeft = 10;
         let timer;
-        
-        // フリック判定用
         let startX = 0;
 
         bestUi.innerText = bestScore;
@@ -93,29 +96,32 @@
         function nextAnimal() {
             currentType = Math.random() > 0.5 ? "dog" : "cat";
             targetCard.innerText = currentType === "dog" ? "🐶" : "🐱";
-            targetCard.style.transform = "translateX(0) scale(1)";
+            targetCard.style.transition = "none";
+            targetCard.style.transform = "translateX(0) scale(1) rotate(0deg)";
+            // 描画更新を待ってからトランジションを戻す
+            setTimeout(() => { targetCard.style.transition = "transform 0.15s ease-out"; }, 10);
         }
 
-        // タッチ開始
         window.addEventListener("touchstart", (e) => {
             if(!gameActive) return;
             startX = e.touches[0].clientX;
         });
 
-        // タッチ終了（ここでフリック方向を判定）
         window.addEventListener("touchend", (e) => {
             if(!gameActive) return;
             let endX = e.changedTouches[0].clientX;
             let diffX = endX - startX;
 
-            if (Math.abs(diffX) > 30) { // 30ピクセル以上動いたらフリックとみなす
+            if (Math.abs(diffX) > 40) {
                 const choice = diffX < 0 ? "dog" : "cat";
                 
-                // アニメーション演出
-                targetCard.style.transform = `translateX(${diffX > 0 ? 200 : -200}px) rotate(${diffX > 0 ? 20 : -20}deg)`;
+                // フリックアニメーション演出
+                targetCard.style.transform = `translateX(${diffX > 0 ? 300 : -300}px) rotate(${diffX > 0 ? 30 : -30}deg) scale(0.5)`;
+                targetCard.style.opacity = "0";
                 
                 setTimeout(() => {
                     checkAnswer(choice);
+                    targetCard.style.opacity = "1";
                 }, 100);
             }
         });
@@ -126,9 +132,8 @@
                 timeLeft += 0.4;
                 nextAnimal();
             } else {
-                timeLeft -= 1.2;
+                timeLeft -= 1.5; // ペナルティを少し重く
                 nextAnimal();
-                // ミス演出
                 document.body.style.background = "#ffcfcf";
                 setTimeout(() => document.body.style.background = "#f0f0f0", 100);
             }
@@ -137,6 +142,7 @@
         function startTimer() {
             if(timer) clearInterval(timer);
             timer = setInterval(() => {
+                if(!gameActive) return;
                 timeLeft -= 0.1;
                 scoreUi.innerText = `TIME: ${Math.max(0, timeLeft).toFixed(1)} | SCORE: ${score}`;
                 if(timeLeft <= 0) {
@@ -156,17 +162,16 @@
             location.reload();
         }
 
-        // 20.1秒リフレッシュ
+        // 🚀 30秒ごとに広告を転生（強制リフレッシュ）
         setInterval(() => {
-            ["ad-box-1", "ad-box-2"].forEach(id => {
-                const box = document.getElementById(id);
-                if (box && box.innerHTML.trim() !== "★") {
-                    const tag = box.innerHTML;
-                    box.innerHTML = "";
-                    setTimeout(() => { box.innerHTML = tag; }, 100);
+            ["frame-top", "frame-bottom"].forEach(id => {
+                const f = document.getElementById(id);
+                if(f) {
+                    const s = f.src; f.src = "about:blank";
+                    setTimeout(() => f.src = s, 100);
                 }
             });
-        }, 20100);
+        }, 29000);
     </script>
 </body>
 </html>
