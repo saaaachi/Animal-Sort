@@ -3,89 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Animal Sort Flick v2</title>
+    <title>Animal Sort Flick v2.4</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #f0f0f0; font-family: sans-serif; touch-action: none; }
+        * { box-sizing: border-box; }
+        html, body { 
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background: #f0f0f0; font-family: sans-serif; color: #333; 
+            overflow: hidden; position: fixed; touch-action: none;
+        }
         
-        /* 広告エリア：高さを150pxに設定（中サイズ対応） */
+        /* 広告枠：上下150px固定 */
         #ad-top, #ad-bottom { 
-            position: fixed; left: 0; width: 100%; height: 150px; 
-            background: #333; z-index: 100; display: flex; align-items: center; justify-content: center; 
+            position: absolute; left: 0; width: 100%; height: 150px; 
+            background: #333; z-index: 1000; display: flex; align-items: center; justify-content: center;
         }
         #ad-top { top: 0; }
         #ad-bottom { bottom: 0; }
-        
-        iframe { border: none; width: 100%; height: 150px; }
+        iframe { border: none; width: 100%; height: 100%; }
 
-        /* ゲームエリア：上下150pxを避けて配置 */
-        #game-area { 
-            margin-top: 150px; 
-            height: calc(100vh - 300px); 
-            display: flex; flex-direction: column; align-items: center; justify-content: space-around;
-            position: relative; overflow: hidden;
+        /* ゲーム本体：広告の高さ分(150pxずつ)を強制排除 */
+        #main-container {
+            position: absolute;
+            top: 150px; bottom: 150px; left: 0; right: 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: #f0f0f0; z-index: 10;
         }
 
-        #score-ui { font-size: 24px; font-weight: bold; color: #333; z-index: 10; text-shadow: 1px 1px 2px white; }
+        #score-ui { position: absolute; top: 10px; font-size: 20px; font-weight: bold; }
         
-        /* 中央のターゲット */
+        /* 中央ターゲット */
         #target-card {
             width: 140px; height: 140px; background: white; border-radius: 20px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 75px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-            user-select: none; transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 20;
+            font-size: 75px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            z-index: 20; transition: transform 0.15s ease-out, opacity 0.15s;
         }
 
-        .guide { position: absolute; top: 50%; transform: translateY(-50%); font-size: 36px; font-weight: bold; opacity: 0.25; pointer-events: none; }
-        #left-guide { left: 15px; color: #ff6b6b; }
-        #right-guide { right: 15px; color: #4ecdc4; }
+        .guide { position: absolute; top: 50%; transform: translateY(-50%); font-size: 32px; font-weight: bold; opacity: 0.15; pointer-events: none; }
+        #left-guide { left: 15px; color: #ff6b6b; text-align: center; }
+        #right-guide { right: 15px; color: #4ecdc4; text-align: center; }
 
-        #startScreen {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.96); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50;
+        /* メニュー/ゲームオーバー画面 */
+        #menuScreen { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(255,255,255,0.98); display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; z-index: 200; padding: 10px; gap: 10px;
         }
-        #goButton { padding: 15px 45px; font-size: 24px; background: #333; border: none; border-radius: 50px; color: white; font-weight: bold; cursor: pointer; box-shadow: 0 4px #000; }
-        #best-info { margin-top: 15px; font-weight: bold; color: #555; }
+
+        #ad-middle-container { 
+            width: 300px; height: 250px; background: #ddd; display: none; 
+            justify-content: center; align-items: center; flex-shrink: 0;
+        }
+        
+        .btn-group { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
+        .menu-btn { 
+            padding: 12px 0; font-size: 16px; border: none; border-radius: 50px; 
+            color: white; font-weight: bold; cursor: pointer; text-decoration: none; 
+            width: 220px; text-align: center;
+        }
+        #goButton { background: #333; }
+        .link-btn { background: #ff4081; }
+        .best-info { color: #555; font-weight: bold; }
     </style>
 </head>
 <body>
+    <div id="ad-top"><iframe src="ad.html" id="frame-top"></iframe></div>
 
-    <div id="ad-top"><iframe id="frame-top" src="ad.html"></iframe></div>
-    <div id="ad-bottom"><iframe id="frame-bottom" src="ad.html"></iframe></div>
-
-    <div id="game-area">
+    <div id="main-container">
         <div id="score-ui">TIME: 10.0 | SCORE: 0</div>
         
         <div id="left-guide" class="guide">🐶<br>左</div>
         <div id="target-card">？</div>
         <div id="right-guide" class="guide">右<br>🐱</div>
 
-        <div id="startScreen">
-            <h1 style="color:#333; margin-bottom: 10px;">ANIMAL SORT</h1>
-            <p style="text-align: center; line-height: 1.6; margin-bottom: 20px;">🐶は左へ！🐱は右へ！<br>爆速でフリックしてね！</p>
-            <button id="goButton">GAME START</button>
-            <div id="best-info">BEST SCORE: <span id="best-ui">0</span></div>
+        <div id="menuScreen">
+            <div id="menuHeader" style="text-align:center;">
+                <h2 id="menuTitle" style="color:#333; margin:0; font-size: 24px;">ANIMAL SORT</h2>
+                <div class="best-info">BEST: <span id="best-ui">0</span></div>
+            </div>
+
+            <div id="ad-middle-container">
+                <script src="https://adm.shinobi.jp/s/1e6de436ea850948e238e975a93767eb"></script>
+            </div>
+
+            <div class="btn-group" id="btnGroup">
+                <button id="goButton" class="menu-btn">GAME START</button>
+                <a href="https://saaaachi.github.io/Hungry-Animal/" class="menu-btn link-btn">他のゲームはこちら</a>
+            </div>
         </div>
     </div>
 
+    <div id="ad-bottom"><iframe src="ad.html" id="frame-bottom"></iframe></div>
+
     <script>
-        const targetCard = document.getElementById("target-card");
-        const scoreUi = document.getElementById("score-ui");
-        const startScreen = document.getElementById("startScreen");
-        const bestUi = document.getElementById("best-ui");
+        const targetCard = document.getElementById("target-card"),
+              scoreUi = document.getElementById("score-ui"),
+              menuScreen = document.getElementById("menuScreen"),
+              menuTitle = document.getElementById("menuTitle"),
+              menuHeader = document.getElementById("menuHeader"),
+              bestUi = document.getElementById("best-ui"),
+              goButton = document.getElementById("goButton"),
+              adMid = document.getElementById("ad-middle-container"),
+              btnGroup = document.getElementById("btnGroup"),
+              mainContainer = document.getElementById("main-container");
 
-        let score = 0;
-        let bestScore = localStorage.getItem("animal_sort_best") || 0;
-        let currentType = ""; 
-        let gameActive = false;
-        let timeLeft = 10;
-        let timer;
-        let startX = 0;
+        let score = 0, bestScore = localStorage.getItem("animal_sort_best") || 0;
+        let currentType = "", gameActive = false, timeLeft = 10, timer, startX = 0;
 
-        bestUi.innerText = bestScore;
+        window.onload = () => { bestUi.innerText = bestScore; };
 
-        document.getElementById("goButton").onclick = () => {
-            startScreen.style.display = "none";
+        goButton.onclick = () => {
+            menuScreen.style.display = "none";
+            adMid.style.display = "none";
+            menuHeader.style.display = "block";
             gameActive = true;
             score = 0;
             timeLeft = 10;
@@ -98,44 +128,39 @@
             targetCard.innerText = currentType === "dog" ? "🐶" : "🐱";
             targetCard.style.transition = "none";
             targetCard.style.transform = "translateX(0) scale(1) rotate(0deg)";
-            // 描画更新を待ってからトランジションを戻す
-            setTimeout(() => { targetCard.style.transition = "transform 0.15s ease-out"; }, 10);
+            targetCard.style.opacity = "1";
+            setTimeout(() => { targetCard.style.transition = "transform 0.15s ease-out, opacity 0.15s"; }, 10);
         }
 
-        window.addEventListener("touchstart", (e) => {
+        // 広告エリア外（main-container）でのみフリックを検知
+        mainContainer.addEventListener("touchstart", (e) => {
             if(!gameActive) return;
             startX = e.touches[0].clientX;
         });
 
-        window.addEventListener("touchend", (e) => {
+        mainContainer.addEventListener("touchend", (e) => {
             if(!gameActive) return;
-            let endX = e.changedTouches[0].clientX;
-            let diffX = endX - startX;
+            let diffX = e.changedTouches[0].clientX - startX;
 
             if (Math.abs(diffX) > 40) {
                 const choice = diffX < 0 ? "dog" : "cat";
-                
-                // フリックアニメーション演出
-                targetCard.style.transform = `translateX(${diffX > 0 ? 300 : -300}px) rotate(${diffX > 0 ? 30 : -30}deg) scale(0.5)`;
+                targetCard.style.transform = `translateX(${diffX > 0 ? 200 : -200}px) rotate(${diffX > 0 ? 20 : -20}deg) scale(0.5)`;
                 targetCard.style.opacity = "0";
-                
-                setTimeout(() => {
-                    checkAnswer(choice);
-                    targetCard.style.opacity = "1";
-                }, 100);
+                setTimeout(() => checkAnswer(choice), 100);
             }
         });
 
         function checkAnswer(choice) {
+            if(!gameActive) return;
             if(choice === currentType) {
                 score++;
                 timeLeft += 0.4;
                 nextAnimal();
             } else {
-                timeLeft -= 1.5; // ペナルティを少し重く
+                timeLeft -= 1.5;
                 nextAnimal();
-                document.body.style.background = "#ffcfcf";
-                setTimeout(() => document.body.style.background = "#f0f0f0", 100);
+                mainContainer.style.background = "#ffcfcf";
+                setTimeout(() => mainContainer.style.background = "#f0f0f0", 100);
             }
         }
 
@@ -145,9 +170,7 @@
                 if(!gameActive) return;
                 timeLeft -= 0.1;
                 scoreUi.innerText = `TIME: ${Math.max(0, timeLeft).toFixed(1)} | SCORE: ${score}`;
-                if(timeLeft <= 0) {
-                    gameOver();
-                }
+                if(timeLeft <= 0) gameOver();
             }, 100);
         }
 
@@ -157,21 +180,29 @@
             if(score > bestScore) {
                 bestScore = score;
                 localStorage.setItem("animal_sort_best", bestScore);
+                bestUi.innerText = bestScore;
             }
-            alert(`TIME UP!\nSCORE: ${score}`);
-            location.reload();
+            menuTitle.innerText = "TIME UP!";
+            menuTitle.style.color = "#f44336";
+            menuHeader.style.display = "none"; // 広告スペース確保
+            goButton.innerText = "RETRY";
+
+            btnGroup.style.opacity = "0";
+            btnGroup.style.pointerEvents = "none";
+            adMid.style.display = "flex"; 
+            menuScreen.style.display = "flex";
+
+            setTimeout(() => {
+                btnGroup.style.opacity = "1";
+                btnGroup.style.pointerEvents = "auto";
+            }, 600);
         }
 
-        // 🚀 30秒ごとに広告を転生（強制リフレッシュ）
         setInterval(() => {
-            ["frame-top", "frame-bottom"].forEach(id => {
-                const f = document.getElementById(id);
-                if(f) {
-                    const s = f.src; f.src = "about:blank";
-                    setTimeout(() => f.src = s, 100);
-                }
+            document.querySelectorAll('iframe').forEach(f => {
+                const s = f.src; f.src = "about:blank"; setTimeout(() => f.src = s, 100);
             });
-        }, 29000);
+        }, 30000);
     </script>
 </body>
 </html>
